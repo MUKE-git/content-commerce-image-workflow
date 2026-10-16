@@ -7,6 +7,7 @@ import re
 import secrets
 import time
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
@@ -15,7 +16,7 @@ from typing import Callable, Sequence
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 
 from .ocr import detect_text
-from .stickers import make_stickers
+from .stickers import PhotoOverlay, bundled_photo, random_photo
 
 OUTPUT_SIZE = (1280, 1706)
 MAX_BATCH = 20
@@ -144,28 +145,11 @@ def _text_layer(size: tuple[int, int], rng: random.Random) -> Image.Image:
     return layer
 
 
-def _sticker_layer(
-    layer: Image.Image, stickers: Sequence[Image.Image], rng: random.Random,
-    image_index: int,
-) -> None:
-    width, height = layer.size
-    if not stickers:
-        draw = ImageDraw.Draw(layer)
-        color = rng.choice(((210, 190, 170, 255), (180, 205, 200, 255), (215, 200, 220, 255)))
-        draw.rectangle((0, 0, width, height), fill=color)
-        for _ in range(12):
-            x, y = rng.randrange(width), rng.randrange(height)
-            radius = rng.randint(40, 180)
-            draw.ellipse((x - radius, y - radius, x + radius, y + radius),
-                         fill=(color[2], color[0], color[1], 255))
-        return
-    for number in range(2):
-        sticker = stickers[(image_index * 2 + number) % len(stickers)]
-        size = (int(width * 0.74), int(height * 0.75))
-        tile = ImageOps.fit(sticker, size, Image.Resampling.LANCZOS).convert("RGBA")
-        x = rng.randint(-25, 25) if number == 0 else width - size[0] + rng.randint(-25, 25)
-        y = rng.randint(-25, 25) if number == 0 else height - size[1] + rng.randint(-25, 25)
-        layer.alpha_composite(tile, (x, y))
+def _sticker_overlay(image: Image.Image, photo: PhotoOverlay, rng: random.Random) -> Image.Image:
+    # A real photograph covers the complete canvas at exactly 1% blend strength.
+    fitted = ImageOps.fit(photo.image, image.size, Image.Resampling.LANCZOS,
+                          centering=(rng.random(), rng.random()))
+    return Image.blend(image, fitted, 0.01)
 
 
 def _graffiti(layer: Image.Image, rng: random.Random) -> None:
@@ -200,13 +184,14 @@ def _output_name(name: str, index: int) -> str:
 
 
 def process_image(
-    item: ImageInput, *, index: int = 0, stickers: Sequence[Image.Image] = (),
+    item: ImageInput, *, index: int = 0, photo: PhotoOverlay | None = None,
     text_detector: TextDetector = detect_text, seed: int | None = None,
     progress: Callable[[str], None] | None = None,
 ) -> ImageResult:
     """Process one image; errors are returned with the stage where they occurred."""
     start = time.perf_counter()
     rng = random.Random(seed if seed is not None else secrets.randbits(64))
+    photo = photo or bundled_photo(rng)
     result = ImageResult(item.name, _output_name(item.name, index))
     stage = "geometry"
     try:
@@ -229,7 +214,13 @@ def process_image(
             elif stage == "text":
                 layer = _text_layer(image.size, rng)
             elif stage == "sticker":
-                _sticker_layer(layer, stickers, rng, index)
+                image = _sticker_overlay(image, photo, rng)
+                result.details["photo_source"] = photo.source_url
+                result.details["photo_provider"] = photo.source_name
+                result.details["photo_search_term"] = photo.search_term
+                result.details["photo_search_offset"] = photo.search_offset
+                if photo.fallback_reason:
+                    result.details["photo_fallback_reason"] = photo.fallback_reason
             elif stage == "graffiti":
                 _graffiti(layer, rng)
             elif stage == "composite":
@@ -250,28 +241,31 @@ def process_image(
 
 def process_batch(
     items: Sequence[ImageInput], *, text_detector: TextDetector = detect_text,
-    sticker_loader: Callable[[int], list[Image.Image]] = make_stickers,
+    photo_loader: Callable[[random.Random], PhotoOverlay] = random_photo,
     seed: int | None = None, progress: ProgressCallback | None = None,
 ) -> BatchResult:
     """Process at most 20 uploads independently, preserving input order."""
     if not 1 <= len(items) <= MAX_BATCH:
         raise ValueError("每批需上传 1 至 20 张图片")
     batch_rng = random.Random(seed if seed is not None else secrets.randbits(64))
-    sticker_error = None
-    try:
-        stickers = sticker_loader(4)
-    except Exception as error:
-        stickers = []
-        sticker_error = str(error)
-    if not stickers and sticker_error is None:
-        sticker_error = "本地图案未生成"
+    image_seeds = [batch_rng.getrandbits(64) for _ in items]
+    with ThreadPoolExecutor(max_workers=min(8, len(items))) as pool:
+        futures = [pool.submit(photo_loader, random.Random(image_seed)) for image_seed in image_seeds]
+        photos = []
+        for image_seed, future in zip(image_seeds, futures):
+            try:
+                photos.append(future.result())
+            except Exception as error:
+                photos.append(bundled_photo(random.Random(image_seed), str(error)))
     results = []
-    for index, item in enumerate(items):
+    for index, (item, photo, image_seed) in enumerate(zip(items, photos, image_seeds)):
         notify = None
         if progress:
             notify = lambda stage, i=index, name=item.name: progress(i + 1, len(items), stage, name)
         results.append(process_image(
-            item, index=index, stickers=stickers, text_detector=text_detector,
-            seed=batch_rng.getrandbits(64), progress=notify,
+            item, index=index, photo=photo, text_detector=text_detector,
+            seed=image_seed, progress=notify,
         ))
-    return BatchResult(results, "local-patterns" if stickers else "basic-shapes", sticker_error)
+    source = "Wikimedia Commons" if all(p.source_name == "Wikimedia Commons" for p in photos) else "photo backup used"
+    errors = [p.fallback_reason for p in photos if p.fallback_reason]
+    return BatchResult(results, source, "; ".join(errors) if errors else None)

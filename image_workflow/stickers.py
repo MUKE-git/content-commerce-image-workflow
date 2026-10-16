@@ -1,41 +1,102 @@
-"""Small local decoration set; image processing never needs a media API."""
+"""Find a random real photo for each image, with downloaded photo backups."""
 
 from __future__ import annotations
 
-from PIL import Image, ImageDraw
+import random
+from dataclasses import dataclass
+from io import BytesIO
+from pathlib import Path
+from urllib.parse import urlparse
+
+import requests
+from PIL import Image
+
+COMMONS_API = "https://commons.wikimedia.org/w/api.php"
+PHOTO_DIR = Path(__file__).resolve().parent.parent / "assets" / "overlay_photos"
+SEARCH_TERMS = ("leaf texture", "paper texture", "stone texture", "flower petals texture")
+MAX_DOWNLOAD_BYTES = 6 * 1024 * 1024
+HEADERS = {"User-Agent": "ContentCommerceImageWorkflow/0.1 (portfolio project)"}
+PEXELS_PAGES = {
+    "paper": "https://www.pexels.com/photo/texture-of-crumpled-paper-4834961/",
+    "leaves": "https://www.pexels.com/photo/texture-of-green-leaves-16730629/",
+    "stone": "https://www.pexels.com/photo/close-up-of-stone-surface-texture-9348450/",
+    "flower": "https://www.pexels.com/photo/closeup-of-a-pink-tulip-with-raindrops-on-petals-13833083/",
+}
 
 
-def make_stickers(limit: int = 4) -> list[Image.Image]:
-    """Draw repeatable transparent leaf, flower, dot and line patterns."""
-    stickers: list[Image.Image] = []
-    for kind in range(min(max(limit, 0), 4)):
-        image = Image.new("RGBA", (320, 420), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(image)
-        if kind == 0:
-            for x in (45, 145, 245):
-                draw.line((x, 0, x + 25, 420), fill=(89, 144, 112), width=5)
-                for y in range(25, 410, 65):
-                    draw.ellipse((x - 23, y, x + 13, y + 21), fill=(137, 177, 133))
-                    draw.ellipse((x + 16, y + 25, x + 52, y + 46), fill=(89, 144, 112))
-        elif kind == 1:
-            for x in (60, 160, 260):
-                for y in (55, 160, 265, 370):
-                    for dx, dy in ((-20, 0), (20, 0), (0, -20), (0, 20)):
-                        draw.ellipse((x + dx - 13, y + dy - 13, x + dx + 13, y + dy + 13),
-                                     fill=(224, 155, 170))
-                    draw.ellipse((x - 10, y - 10, x + 10, y + 10), fill=(232, 188, 98))
-        elif kind == 2:
-            for y in range(20, 420, 48):
-                for x in range(20 + (y % 96) // 2, 320, 55):
-                    draw.ellipse((x, y, x + 11, y + 11), fill=(174, 164, 199))
-                    draw.arc((x + 14, y - 7, x + 35, y + 14), 20, 310,
-                             fill=(174, 164, 199), width=3)
-        else:
-            for y in range(25, 420, 70):
-                for x in range(20, 320, 70):
-                    draw.line((x, y + 16, x + 18, y, x + 36, y + 16),
-                              fill=(127, 172, 188), width=4)
-                    draw.rounded_rectangle((x + 45, y + 4, x + 58, y + 17), radius=3,
-                                           outline=(127, 172, 188), width=3)
-        stickers.append(image)
-    return stickers
+@dataclass
+class PhotoOverlay:
+    image: Image.Image
+    source_url: str
+    source_name: str
+    search_term: str | None = None
+    search_offset: int | None = None
+    fallback_reason: str | None = None
+
+
+def bundled_photo(rng: random.Random, reason: str | None = None) -> PhotoOverlay:
+    """Choose one of the verified real photos when live search is unavailable."""
+    name = rng.choice(tuple(PEXELS_PAGES))
+    with Image.open(PHOTO_DIR / f"{name}.jpg") as image:
+        return PhotoOverlay(image.convert("RGB"), PEXELS_PAGES[name], "Pexels backup",
+                            fallback_reason=reason)
+
+
+def _download_photo(url: str) -> Image.Image:
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or parsed.hostname not in {"thumb.wikimedia.org", "upload.wikimedia.org"}:
+        raise ValueError("图片下载地址不受信任")
+    response = requests.get(url, headers=HEADERS, timeout=(3, 7), stream=True)
+    try:
+        response.raise_for_status()
+        content = bytearray()
+        for chunk in response.iter_content(64 * 1024):
+            content.extend(chunk)
+            if len(content) > MAX_DOWNLOAD_BYTES:
+                raise ValueError("照片超过下载上限")
+        with Image.open(BytesIO(content)) as image:
+            if image.width * image.height > 30_000_000:
+                raise ValueError("照片像素过大")
+            return image.convert("RGB")
+    finally:
+        response.close()
+
+
+def random_photo(rng: random.Random) -> PhotoOverlay:
+    """Randomize the query and offset for every image; no usage list is kept."""
+    term = rng.choice(SEARCH_TERMS)
+    offset = rng.randrange(32)
+    try:
+        response = requests.get(
+            COMMONS_API,
+            params={
+                "action": "query", "generator": "search", "gsrsearch": f"filetype:bitmap {term}",
+                "gsrnamespace": 6, "gsroffset": offset, "gsrlimit": 8,
+                "prop": "imageinfo", "iiprop": "url|mime", "iiurlwidth": 1280,
+                "format": "json", "formatversion": 2,
+            },
+            headers=HEADERS, timeout=(3, 7),
+        )
+        response.raise_for_status()
+        pages = response.json().get("query", {}).get("pages", [])
+        candidates = []
+        for page in pages:
+            if not page.get("imageinfo"):
+                continue
+            info = page["imageinfo"][0]
+            if info.get("mime") in {"image/jpeg", "image/png", "image/webp"} and info.get("thumburl"):
+                candidates.append(info)
+        rng.shuffle(candidates)
+        for info in candidates[:2]:
+            try:
+                image = _download_photo(info["thumburl"])
+                return PhotoOverlay(image, info.get("descriptionurl", "https://commons.wikimedia.org"),
+                                    "Wikimedia Commons", search_term=term, search_offset=offset)
+            except (requests.RequestException, OSError, ValueError):
+                continue
+        raise RuntimeError("搜索结果没有可下载的照片")
+    except (requests.RequestException, OSError, ValueError, RuntimeError, TypeError) as error:
+        backup = bundled_photo(rng, str(error))
+        backup.search_term = term
+        backup.search_offset = offset
+        return backup

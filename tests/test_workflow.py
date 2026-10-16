@@ -6,6 +6,7 @@ from PIL import Image
 
 from image_workflow import ImageInput, process_batch, process_image
 from image_workflow import ocr
+from image_workflow.stickers import PhotoOverlay, bundled_photo
 from image_workflow.workflow import STAGES
 
 
@@ -23,7 +24,7 @@ def test_batch_keeps_results_isolated_and_exports_only_successes():
         ImageInput("same.png", sample_image("blue")),
     ]
     batch = process_batch(
-        items, text_detector=lambda _: True, sticker_loader=lambda _n: [],
+        items, text_detector=lambda _: True, photo_loader=bundled_photo,
         seed=7, progress=lambda i, n, stage, name: stages.append((i, n, stage, name)),
     )
     assert len(batch.successful) == 2
@@ -57,22 +58,30 @@ def test_batch_limit_and_sticker_failure_fallback():
         process_batch([item] * 21)
     batch = process_batch(
         [item], text_detector=lambda _: None,
-        sticker_loader=lambda _n: (_ for _ in ()).throw(RuntimeError("unavailable")),
+        photo_loader=lambda _rng: (_ for _ in ()).throw(RuntimeError("unavailable")),
     )
     assert batch.successful[0].ok
-    assert batch.sticker_source == "basic-shapes"
+    assert batch.sticker_source == "photo backup used"
     assert batch.sticker_error == "unavailable"
 
 
-def test_twenty_images_and_local_sticker_branch():
+def test_twenty_images_use_individual_photo_searches():
     item = ImageInput("photo.webp", sample_image("yellow", "WEBP"))
+    calls = []
+
+    def photo_loader(rng):
+        calls.append(rng.randrange(1000000))
+        return PhotoOverlay(Image.new("RGB", (40, 40), "purple"),
+                            "https://commons.wikimedia.org/example", "Wikimedia Commons")
+
     batch = process_batch(
         [item] * 20, text_detector=lambda _: False,
-        sticker_loader=lambda _n: [Image.new("RGB", (40, 40), "purple")],
+        photo_loader=photo_loader,
         seed=12,
     )
     assert len(batch.successful) == 20
-    assert batch.sticker_source == "local-patterns"
+    assert batch.sticker_source == "Wikimedia Commons"
+    assert len(calls) == 20
     assert len({image.output_name for image in batch.successful}) == 20
 
 
