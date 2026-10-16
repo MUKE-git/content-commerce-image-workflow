@@ -15,7 +15,7 @@
 - 一次处理 1～20 张 JPG、PNG 或 WebP 图片，输出 1280×1706 像素的 PNG。
 - 自动检测文字：有字或判断不确定时保留原方向；判断无字时才可能水平翻转。
 - 每张图片独立处理、独立记录错误；成功结果可合并下载为 ZIP。
-- 每批只检索一次 Pexels 素材并复用候选图片；没有 API key、无搜索结果或请求失败时使用内置图案。
+- 每批只检索一次 Openverse 素材并复用候选图片；无需 API key，检索失败时使用内置图案。
 - 七个阶段在内存中传递图像，无需旧版的阶段间对象存储上传下载。
 
 ## 本地运行后端
@@ -26,7 +26,7 @@
 python -m pip install -r requirements-workflow.txt
 ```
 
-可选：将已有的 Pexels API key 配置为环境变量 `PEXELS_API_KEY`。未配置时仍可处理图片，贴纸阶段自动使用内置图案。请勿将 key 写入代码或提交到仓库。Pexels 官方页面目前注明暂停发放新 API key；获取入口恢复前无法完成新账号的在线接入。[查看 Pexels API 页面](https://www.pexels.com/api/)。
+贴纸阶段通过 [Openverse 图片接口](https://api.openverse.org/v1/)检索 CC0 或公有领域素材，无需申请 API key。在线接口不可用时自动使用内置图案。部署后仍需验证运行环境能否访问 Openverse。
 
 ```python
 from pathlib import Path
@@ -49,7 +49,7 @@ python -m pytest tests -q
 ## 目录
 
 ```text
-image_workflow/          后端工作流、OCR 与 Pexels 素材获取
+image_workflow/          后端工作流、OCR 与 Openverse 素材获取
 tests/                   后端行为测试
 docs/PRD.md              产品需求文档
 requirements-workflow.txt  后端依赖

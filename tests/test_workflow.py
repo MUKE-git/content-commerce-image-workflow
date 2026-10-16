@@ -72,7 +72,7 @@ def test_twenty_images_and_online_sticker_branch():
         seed=12,
     )
     assert len(batch.successful) == 20
-    assert batch.sticker_source == "Pexels"
+    assert batch.sticker_source == "Openverse"
     assert len({image.output_name for image in batch.successful}) == 20
 
 
