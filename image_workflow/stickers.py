@@ -1,58 +1,41 @@
-"""Fetch public-domain images for the low-opacity sticker layer."""
+"""Small local decoration set; image processing never needs a media API."""
 
 from __future__ import annotations
 
-from io import BytesIO
-from uuid import UUID
-
-import requests
-from PIL import Image
-
-SEARCH_TERMS = ("leaves texture", "flowers texture", "paper texture", "stone texture")
-MAX_DOWNLOAD_BYTES = 6 * 1024 * 1024
-OPENVERSE_API = "https://api.openverse.org/v1/images/"
+from PIL import Image, ImageDraw
 
 
-def fetch_openverse_stickers(query: str, limit: int = 4) -> list[Image.Image]:
-    """Fetch up to ``limit`` CC0 or public-domain Openverse thumbnails."""
-    try:
-        response = requests.get(
-            OPENVERSE_API,
-            params={"q": query, "license": "cc0,pdm", "mature": "false", "page_size": max(8, limit * 2)},
-            timeout=(5, 12),
-        )
-        response.raise_for_status()
-        results = response.json().get("results", [])
-        stickers: list[Image.Image] = []
-        for result in results:
-            if result.get("license") not in {"cc0", "pdm"} or result.get("mature") is True:
-                continue
-            try:
-                image_id = str(UUID(result["id"]))
-            except (KeyError, ValueError, TypeError):
-                continue
-            # Build the URL ourselves so search results cannot choose a download host.
-            url = f"{OPENVERSE_API}{image_id}/thumb/"
-            image_response = None
-            try:
-                image_response = requests.get(url, timeout=(5, 12), stream=True)
-                image_response.raise_for_status()
-                content = bytearray()
-                for chunk in image_response.iter_content(64 * 1024):
-                    content.extend(chunk)
-                    if len(content) > MAX_DOWNLOAD_BYTES:
-                        raise ValueError("Openverse image exceeds download limit")
-                with Image.open(BytesIO(content)) as image:
-                    stickers.append(image.convert("RGB"))
-            except (requests.RequestException, OSError, ValueError):
-                continue
-            finally:
-                if image_response is not None:
-                    image_response.close()
-            if len(stickers) >= limit:
-                break
-        if not stickers:
-            raise RuntimeError("Openverse 搜索无可用图片")
-        return stickers
-    except (requests.RequestException, ValueError, TypeError) as error:
-        raise RuntimeError(f"Openverse 请求失败：{error}") from error
+def make_stickers(limit: int = 4) -> list[Image.Image]:
+    """Draw repeatable transparent leaf, flower, dot and line patterns."""
+    stickers: list[Image.Image] = []
+    for kind in range(min(max(limit, 0), 4)):
+        image = Image.new("RGBA", (320, 420), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        if kind == 0:
+            for x in (45, 145, 245):
+                draw.line((x, 0, x + 25, 420), fill=(89, 144, 112), width=5)
+                for y in range(25, 410, 65):
+                    draw.ellipse((x - 23, y, x + 13, y + 21), fill=(137, 177, 133))
+                    draw.ellipse((x + 16, y + 25, x + 52, y + 46), fill=(89, 144, 112))
+        elif kind == 1:
+            for x in (60, 160, 260):
+                for y in (55, 160, 265, 370):
+                    for dx, dy in ((-20, 0), (20, 0), (0, -20), (0, 20)):
+                        draw.ellipse((x + dx - 13, y + dy - 13, x + dx + 13, y + dy + 13),
+                                     fill=(224, 155, 170))
+                    draw.ellipse((x - 10, y - 10, x + 10, y + 10), fill=(232, 188, 98))
+        elif kind == 2:
+            for y in range(20, 420, 48):
+                for x in range(20 + (y % 96) // 2, 320, 55):
+                    draw.ellipse((x, y, x + 11, y + 11), fill=(174, 164, 199))
+                    draw.arc((x + 14, y - 7, x + 35, y + 14), 20, 310,
+                             fill=(174, 164, 199), width=3)
+        else:
+            for y in range(25, 420, 70):
+                for x in range(20, 320, 70):
+                    draw.line((x, y + 16, x + 18, y, x + 36, y + 16),
+                              fill=(127, 172, 188), width=4)
+                    draw.rounded_rectangle((x + 45, y + 4, x + 58, y + 17), radius=3,
+                                           outline=(127, 172, 188), width=3)
+        stickers.append(image)
+    return stickers

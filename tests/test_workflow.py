@@ -23,7 +23,7 @@ def test_batch_keeps_results_isolated_and_exports_only_successes():
         ImageInput("same.png", sample_image("blue")),
     ]
     batch = process_batch(
-        items, text_detector=lambda _: True, sticker_fetcher=lambda _q, _n: [],
+        items, text_detector=lambda _: True, sticker_loader=lambda _n: [],
         seed=7, progress=lambda i, n, stage, name: stages.append((i, n, stage, name)),
     )
     assert len(batch.successful) == 2
@@ -57,22 +57,22 @@ def test_batch_limit_and_sticker_failure_fallback():
         process_batch([item] * 21)
     batch = process_batch(
         [item], text_detector=lambda _: None,
-        sticker_fetcher=lambda _q, _n: (_ for _ in ()).throw(RuntimeError("offline")),
+        sticker_loader=lambda _n: (_ for _ in ()).throw(RuntimeError("unavailable")),
     )
     assert batch.successful[0].ok
-    assert batch.sticker_source == "built-in"
-    assert batch.sticker_error == "offline"
+    assert batch.sticker_source == "basic-shapes"
+    assert batch.sticker_error == "unavailable"
 
 
-def test_twenty_images_and_online_sticker_branch():
+def test_twenty_images_and_local_sticker_branch():
     item = ImageInput("photo.webp", sample_image("yellow", "WEBP"))
     batch = process_batch(
         [item] * 20, text_detector=lambda _: False,
-        sticker_fetcher=lambda _q, _n: [Image.new("RGB", (40, 40), "purple")],
+        sticker_loader=lambda _n: [Image.new("RGB", (40, 40), "purple")],
         seed=12,
     )
     assert len(batch.successful) == 20
-    assert batch.sticker_source == "Openverse"
+    assert batch.sticker_source == "local-patterns"
     assert len({image.output_name for image in batch.successful}) == 20
 
 

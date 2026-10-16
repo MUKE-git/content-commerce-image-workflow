@@ -15,7 +15,7 @@ from typing import Callable, Sequence
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 
 from .ocr import detect_text
-from .stickers import SEARCH_TERMS, fetch_openverse_stickers
+from .stickers import make_stickers
 
 OUTPUT_SIZE = (1280, 1706)
 MAX_BATCH = 20
@@ -250,22 +250,21 @@ def process_image(
 
 def process_batch(
     items: Sequence[ImageInput], *, text_detector: TextDetector = detect_text,
-    sticker_fetcher: Callable[[str, int], list[Image.Image]] = fetch_openverse_stickers,
+    sticker_loader: Callable[[int], list[Image.Image]] = make_stickers,
     seed: int | None = None, progress: ProgressCallback | None = None,
 ) -> BatchResult:
     """Process at most 20 uploads independently, preserving input order."""
     if not 1 <= len(items) <= MAX_BATCH:
         raise ValueError("每批需上传 1 至 20 张图片")
     batch_rng = random.Random(seed if seed is not None else secrets.randbits(64))
-    query = batch_rng.choice(SEARCH_TERMS)
     sticker_error = None
     try:
-        stickers = sticker_fetcher(query, 4)
+        stickers = sticker_loader(4)
     except Exception as error:
         stickers = []
         sticker_error = str(error)
     if not stickers and sticker_error is None:
-        sticker_error = "Openverse 未返回图片或暂时不可用"
+        sticker_error = "本地图案未生成"
     results = []
     for index, item in enumerate(items):
         notify = None
@@ -275,4 +274,4 @@ def process_batch(
             item, index=index, stickers=stickers, text_detector=text_detector,
             seed=batch_rng.getrandbits(64), progress=notify,
         ))
-    return BatchResult(results, "Openverse" if stickers else "built-in", sticker_error)
+    return BatchResult(results, "local-patterns" if stickers else "basic-shapes", sticker_error)
