@@ -7,7 +7,6 @@ import re
 import secrets
 import time
 import zipfile
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
@@ -16,7 +15,8 @@ from typing import Callable, Sequence
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 
 from .ocr import detect_text
-from .stickers import PhotoOverlay, bundled_photo, random_photo
+from .stickers import PhotoOverlay, PhotoPrefetchPool, bundled_photo, download_photo, search_photos
+from .photo_calibration import online_wait_seconds
 
 OUTPUT_SIZE = (1280, 1706)
 MAX_BATCH = 20
@@ -51,6 +51,7 @@ class BatchResult:
     images: list[ImageResult]
     sticker_source: str
     sticker_error: str | None = None
+    photo_fetch_stats: dict[str, object] = field(default_factory=dict)
 
     @property
     def successful(self) -> list[ImageResult]:
@@ -185,13 +186,13 @@ def _output_name(name: str, index: int) -> str:
 
 def process_image(
     item: ImageInput, *, index: int = 0, photo: PhotoOverlay | None = None,
+    photo_provider: Callable[[random.Random], PhotoOverlay] | None = None,
     text_detector: TextDetector = detect_text, seed: int | None = None,
     progress: Callable[[str], None] | None = None,
 ) -> ImageResult:
     """Process one image; errors are returned with the stage where they occurred."""
     start = time.perf_counter()
     rng = random.Random(seed if seed is not None else secrets.randbits(64))
-    photo = photo or bundled_photo(rng)
     result = ImageResult(item.name, _output_name(item.name, index))
     stage = "geometry"
     try:
@@ -214,6 +215,7 @@ def process_image(
             elif stage == "text":
                 layer = _text_layer(image.size, rng)
             elif stage == "sticker":
+                photo = photo or (photo_provider(rng) if photo_provider else bundled_photo(rng))
                 image = _sticker_overlay(image, photo, rng)
                 result.details["photo_source"] = photo.source_url
                 result.details["photo_provider"] = photo.source_name
@@ -241,7 +243,8 @@ def process_image(
 
 def process_batch(
     items: Sequence[ImageInput], *, text_detector: TextDetector = detect_text,
-    photo_loader: Callable[[random.Random], PhotoOverlay] = random_photo,
+    photo_search=search_photos, photo_download=download_photo,
+    online_seconds: float | None = None,
     seed: int | None = None, progress: ProgressCallback | None = None,
 ) -> BatchResult:
     """Process at most 20 uploads independently, preserving input order."""
@@ -249,23 +252,32 @@ def process_batch(
         raise ValueError("每批需上传 1 至 20 张图片")
     batch_rng = random.Random(seed if seed is not None else secrets.randbits(64))
     image_seeds = [batch_rng.getrandbits(64) for _ in items]
-    with ThreadPoolExecutor(max_workers=min(8, len(items))) as pool:
-        futures = [pool.submit(photo_loader, random.Random(image_seed)) for image_seed in image_seeds]
-        photos = []
-        for image_seed, future in zip(image_seeds, futures):
-            try:
-                photos.append(future.result())
-            except Exception as error:
-                photos.append(bundled_photo(random.Random(image_seed), str(error)))
+    seconds = online_wait_seconds(len(items)) if online_seconds is None else online_seconds
+    if seconds < 0:
+        raise ValueError("在线等待时间不能为负数")
+    pool = PhotoPrefetchPool(len(items), seconds, random.Random(batch_rng.getrandbits(64)),
+                             search=photo_search, download=photo_download)
+    pool.start()
     results = []
-    for index, (item, photo, image_seed) in enumerate(zip(items, photos, image_seeds)):
-        notify = None
-        if progress:
-            notify = lambda stage, i=index, name=item.name: progress(i + 1, len(items), stage, name)
-        results.append(process_image(
-            item, index=index, photo=photo, text_detector=text_detector,
-            seed=image_seed, progress=notify,
-        ))
-    source = "Wikimedia Commons" if all(p.source_name == "Wikimedia Commons" for p in photos) else "photo backup used"
-    errors = [p.fallback_reason for p in photos if p.fallback_reason]
-    return BatchResult(results, source, "; ".join(errors) if errors else None)
+    try:
+        for index, (item, image_seed) in enumerate(zip(items, image_seeds)):
+            notify = None
+            if progress:
+                notify = lambda stage, i=index, name=item.name: progress(i + 1, len(items), stage, name)
+            results.append(process_image(
+                item, index=index, photo_provider=pool.next_photo, text_detector=text_detector,
+                seed=image_seed, progress=notify,
+            ))
+    finally:
+        pool.close()
+    stats = pool.stats()
+    sources = [image.details["photo_provider"] for image in results
+               if "photo_provider" in image.details]
+    backups = sum(source == "Pexels backup" for source in sources)
+    stats["backup_uses"] = backups
+    stats["online_uses"] = sum(source == "Wikimedia Commons" for source in sources)
+    stats["batch_seconds"] = round(time.monotonic() - pool.started, 3)
+    source = "Wikimedia Commons" if sources and not backups else "photo backup used"
+    errors = [str(image.details["photo_fallback_reason"]) for image in results
+              if "photo_fallback_reason" in image.details]
+    return BatchResult(results, source, "; ".join(errors) if errors else None, stats)

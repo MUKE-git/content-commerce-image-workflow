@@ -1,4 +1,5 @@
 from io import BytesIO
+from threading import Event
 from zipfile import ZipFile
 
 import pytest
@@ -6,7 +7,7 @@ from PIL import Image
 
 from image_workflow import ImageInput, process_batch, process_image
 from image_workflow import ocr
-from image_workflow.stickers import PhotoOverlay, bundled_photo
+from image_workflow.stickers import PhotoCandidate, PhotoOverlay
 from image_workflow.workflow import STAGES
 
 
@@ -24,7 +25,7 @@ def test_batch_keeps_results_isolated_and_exports_only_successes():
         ImageInput("same.png", sample_image("blue")),
     ]
     batch = process_batch(
-        items, text_detector=lambda _: True, photo_loader=bundled_photo,
+        items, text_detector=lambda _: True, photo_search=lambda _: [],
         seed=7, progress=lambda i, n, stage, name: stages.append((i, n, stage, name)),
     )
     assert len(batch.successful) == 2
@@ -58,31 +59,55 @@ def test_batch_limit_and_sticker_failure_fallback():
         process_batch([item] * 21)
     batch = process_batch(
         [item], text_detector=lambda _: None,
-        photo_loader=lambda _rng: (_ for _ in ()).throw(RuntimeError("unavailable")),
+        photo_search=lambda _rng: (_ for _ in ()).throw(RuntimeError("unavailable")),
     )
     assert batch.successful[0].ok
     assert batch.sticker_source == "photo backup used"
-    assert batch.sticker_error == "unavailable"
+    assert "unavailable" in batch.sticker_error
 
 
-def test_twenty_images_use_individual_photo_searches():
+def test_twenty_images_consume_downloads_once():
     item = ImageInput("photo.webp", sample_image("yellow", "WEBP"))
     calls = []
 
-    def photo_loader(rng):
-        calls.append(rng.randrange(1000000))
+    def photo_search(rng):
+        start = len(calls)
+        candidates = [PhotoCandidate(f"https://thumb.wikimedia.org/{start + i}.jpg",
+                                     f"https://commons.wikimedia.org/{start + i}",
+                                     "texture", 0) for i in range(5)]
+        calls.extend(candidates)
+        return candidates
+
+    def photo_download(candidate):
         return PhotoOverlay(Image.new("RGB", (40, 40), "purple"),
-                            "https://commons.wikimedia.org/example", "Wikimedia Commons")
+                            candidate.source_url, "Wikimedia Commons")
 
     batch = process_batch(
         [item] * 20, text_detector=lambda _: False,
-        photo_loader=photo_loader,
+        photo_search=photo_search, photo_download=photo_download,
         seed=12,
     )
     assert len(batch.successful) == 20
     assert batch.sticker_source == "Wikimedia Commons"
-    assert len(calls) == 20
+    assert len(calls) >= 20
+    assert len({image.details["photo_source"] for image in batch.images}) == 20
     assert len({image.output_name for image in batch.successful}) == 20
+
+
+def test_processing_starts_while_search_is_still_running():
+    geometry_started = Event()
+
+    def search(_rng):
+        assert geometry_started.wait(3)
+        return []
+
+    batch = process_batch(
+        [ImageInput("one.png", sample_image("green"))],
+        text_detector=lambda _: True, photo_search=search,
+        progress=lambda _i, _n, stage, _name: geometry_started.set() if stage == "geometry" else None,
+    )
+    assert batch.successful[0].ok
+    assert batch.photo_fetch_stats["backup_uses"] == 1
 
 
 def test_ocr_only_marks_clear_text_free_images_as_safe_to_flip(monkeypatch):
