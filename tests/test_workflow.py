@@ -53,6 +53,24 @@ def test_text_or_uncertainty_keeps_original_orientation(detection):
     assert result.details["flipped"] is False
 
 
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_confirmed_text_free_image_always_flips(seed):
+    source = Image.new("RGB", (120, 160), "red")
+    source.paste(Image.new("RGB", (60, 160), "blue"), (60, 0))
+    buffer = BytesIO()
+    source.save(buffer, "PNG")
+    item = ImageInput("no-text.png", buffer.getvalue())
+    result = process_image(item, text_detector=lambda _: False, seed=seed)
+    assert result.ok
+    assert result.details["text_detection"] is False
+    assert result.details["flipped"] is True
+    with Image.open(BytesIO(result.data)) as output:
+        left = output.getpixel((320, 850))
+        right = output.getpixel((960, 850))
+        assert left[2] > left[0]
+        assert right[0] > right[2]
+
+
 def test_batch_limit_and_sticker_failure_fallback():
     item = ImageInput("a.png", sample_image("green"))
     with pytest.raises(ValueError, match="20"):

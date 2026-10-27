@@ -201,7 +201,7 @@ def process_image(
             has_text = text_detector(image)
         except Exception:
             has_text = None
-        flip = has_text is False and rng.choice((True, False))
+        flip = has_text is False
         result.details["text_detection"] = has_text
         result.details["flipped"] = flip
         for stage in STAGES:

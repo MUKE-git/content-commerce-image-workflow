@@ -1,0 +1,44 @@
+{
+  "system": "本地两图查重模拟系统",
+  "created_at_utc": "2026-10-19T14:09:55.104028+00:00",
+  "images": {
+    "original": {
+      "path": "C:\\Users\\lenovo\\Desktop\\AI_Player\\去重工作流\\测试\\C.png",
+      "width": 1773,
+      "height": 2364,
+      "format": "PNG"
+    },
+    "candidate": {
+      "path": "C:\\Users\\lenovo\\Desktop\\AI_Player\\去重工作流\\测试\\C3.png",
+      "width": 1773,
+      "height": 2364,
+      "format": "PNG"
+    }
+  },
+  "alignment": "EXIF 方向校正；等比例缩放至 512×512 白底居中画布",
+  "metrics": {
+    "SSIM": 0.996302,
+    "PSNR_dB": 37.1427,
+    "MSE": 12.5547,
+    "MAD": 2.5233
+  },
+  "component_scores": {
+    "SSIM": 99.26,
+    "PSNR": 81.43,
+    "MSE": 97.49,
+    "MAD": 94.95
+  },
+  "similarity_score": 93.3,
+  "verdict": "重复",
+  "thresholds": {
+    "duplicate": 75,
+    "suspected_duplicate": 60
+  },
+  "weights": {
+    "SSIM": 0.5,
+    "PSNR": 0.3,
+    "MSE": 0.1,
+    "MAD": 0.1
+  },
+  "limitations": "仅为附件规则的离线模拟；不能推断小红书、抖音或其他平台的实际审核结果。"
+}
