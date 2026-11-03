@@ -208,7 +208,7 @@ def _use_page() -> None:
     _init_state()
     st.markdown(
         '<div class="use-hero"><div class="eyebrow">图片处理工作台</div>'
-        '<h1>准备好你的图片了吗？</h1>'
+        '<h1> 你的图片准备好了吗？</h1>'
         '<p>选好图片，检查无误后开始处理。</p></div>',
         unsafe_allow_html=True,
     )
@@ -236,21 +236,27 @@ STYLE = """
 [data-testid="stHeader"] { background:transparent; }
 [data-testid="stMainBlockContainer"] { max-width:1020px; padding-top:2rem; padding-bottom:5rem; }
 div[data-testid="stToolbar"], #MainMenu, footer { visibility:hidden; }
-.site-brand { font-size:20px; font-weight:750; letter-spacing:-.04em; padding-top:5px; }
+.site-brand { font-size:26px; font-weight:750; letter-spacing:-.04em; line-height:1.4; }
 .site-brand span { color:var(--orange); font-size:27px; vertical-align:-2px; }
-.dev-placeholder { color:#a29c96; text-align:right; font-size:14px; padding-top:13px; white-space:nowrap; }
+.dev-placeholder { color:#a29c96; text-align:right; font-size:17px; line-height:1.4; white-space:nowrap; }
 .st-key-top_nav [data-testid="stHorizontalBlock"] { align-items:center; }
-[data-testid="stPageLink"] a { color:#6d6862; font-weight:600; }
+.st-key-top_nav [data-testid="stColumn"] { display:flex; align-items:center; }
+.st-key-top_nav [data-testid="stColumn"]:last-child { justify-content:flex-end; }
+.st-key-top_nav [data-testid="stColumn"] > div { width:100%; }
+.st-key-top_nav [data-testid="stPageLink"] a { color:#6d6862; font-size:30px; font-weight:600; line-height:2;position:relative; top:8px; }
+.st-key-top_nav [data-testid="stPageLink"] a p {
+    font-size:19px !important;}
 [data-testid="stPageLink"] a:hover { color:var(--orange); }
 .use-hero { text-align:center; padding:52px 0 25px; }
-.eyebrow { color:var(--orange-deep); font-size:12px; font-weight:750; letter-spacing:.15em; }
-.use-hero h1,.home-placeholder h1 { font-size:clamp(28px,4vw,43px); line-height:1.3; letter-spacing:-.05em; margin:11px 0 8px; color:var(--ink); }
-.use-hero p,.home-placeholder p { color:var(--muted); font-size:15px; }
+.eyebrow { color:var(--orange-deep); font-size:30px; font-weight:900; letter-spacing:.15em; }
+.use-hero h1,.home-placeholder h1 { font-size:clamp(35px,5vw,54px); line-height:0.5; letter-spacing:-.05em; margin:7px 0 7px; color:var(--ink); }
+.use-hero h1 { position:relative; left:19px; }
+.use-hero p,.home-placeholder p { color:var(--muted); font-size:19px; }
 .upload-anchor + div [data-testid="stFileUploaderDropzone"] { min-height:168px; border:2px dashed #e7ac82; border-radius:16px; background:#f5f3f0; padding:25px; }
-[data-testid="stFileUploaderDropzone"] { min-height:168px; border:2px dashed #e7ac82; border-radius:16px; background:#f5f3f0; padding:25px; }
-[data-testid="stFileUploaderDropzone"]::before { content:"+"; display:grid; place-items:center; width:52px; height:52px; flex:none; color:white; background:var(--orange); border-radius:12px; font-size:34px; line-height:1; }
+[data-testid="stFileUploaderDropzone"] { min-height:168px; border:2px dashed #e7ac82; border-radius:16px; background:#f5f3f0; padding:25px; display:flex; flex-direction:column-reverse; align-items:center; justify-content:center; gap:12px; }
 [data-testid="stFileUploaderDropzone"] svg { display:none; }
 [data-testid="stFileUploaderDropzoneInstructions"] > div { display:none; }
+[data-testid="stFileUploaderDropzoneInstructions"] { text-align:center; }
 [data-testid="stFileUploaderDropzoneInstructions"]::after { content:"点击选择图片，或拖拽到这里"; color:var(--ink); font-size:16px; font-weight:650; }
 [data-testid="stFileUploaderDropzone"] button { color:white; background:var(--orange); border:0; border-radius:9px; font-size:0; }
 [data-testid="stFileUploaderDropzone"] button::after { content:"选择图片"; font-size:13px; }
@@ -284,7 +290,7 @@ div.stButton > button[kind="secondary"], div.stDownloadButton > button[kind="sec
 .result-failed { font-size:65px; }
 .home-placeholder { text-align:center; padding:100px 20px; }
 @media (prefers-reduced-motion:reduce) { .image-card,.orbit { animation:none !important; } }
-@media (max-width:700px) { [data-testid="stMainBlockContainer"] { padding:1.5rem 1.2rem 4rem; } .st-key-top_nav [data-testid="stHorizontalBlock"] { flex-direction:row !important; flex-wrap:wrap !important; gap:8px 16px; } .st-key-top_nav [data-testid="stColumn"] { flex:0 0 auto !important; width:auto !important; min-width:0 !important; } .st-key-top_nav [data-testid="stColumn"]:first-child { flex:1 1 100% !important; } .st-key-top_nav [data-testid="stColumn"]:last-child { margin-left:auto; } .site-brand { font-size:16px; } .site-brand span { font-size:19px; } .dev-placeholder { font-size:11px; padding-top:0; } .use-hero { padding-top:35px; } .use-hero h1 { font-size:29px; } [data-testid="stFileUploaderDropzone"] { min-height:165px; } }
+@media (max-width:700px) { [data-testid="stMainBlockContainer"] { padding:1.5rem 1.2rem 4rem; } .st-key-top_nav [data-testid="stHorizontalBlock"] { flex-direction:row !important; flex-wrap:wrap !important; gap:8px 16px; } .st-key-top_nav [data-testid="stColumn"] { flex:0 0 auto !important; width:auto !important; min-width:0 !important; } .st-key-top_nav [data-testid="stColumn"]:first-child { flex:1 1 100% !important; } .st-key-top_nav [data-testid="stColumn"]:last-child { margin-left:auto; } .site-brand { font-size:22px; } .site-brand span { font-size:23px; } .dev-placeholder { font-size:21px; } .use-hero { padding-top:35px; } .use-hero h1 { font-size:35px; } [data-testid="stFileUploaderDropzone"] { min-height:165px; } }
 </style>
 """
 
@@ -296,7 +302,7 @@ def main() -> None:
     home = st.Page(_home_placeholder, title="首页", url_path="home")
     current = st.navigation([use, home], position="hidden")
     with st.container(key="top_nav"):
-        brand, home_link, use_link, developer = st.columns([3, 1, 1.2, 1.7], vertical_alignment="center")
+        brand, home_link, use_link, developer = st.columns([2.6, 0.7, 1.1, 2.5], vertical_alignment="center")
         brand.markdown('<div class="site-brand">图像去重处理器 <span>✳</span></div>', unsafe_allow_html=True)
         home_link.page_link(home, label="首页")
         use_link.page_link(use, label="开始使用")
