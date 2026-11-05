@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>图像去重处理器｜首页首屏草图</title>
+  <style>
+    :root { --ink:#232319; --paper:#faf8f2; --orange:#fa6836; --line:#dcd9cd; --muted:#66685c; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; color:var(--ink); background:var(--paper); font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif; }
+    body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.22; background-image:radial-gradient(#c7c5b9 .65px,transparent .65px); background-size:8px 8px; }
+    .shell { max-width:1440px; margin:auto; padding:0 clamp(20px,5vw,76px); position:relative; }
+    header { height:94px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
+    .brand { display:flex; align-items:center; gap:12px; font-weight:900; font-size:20px; letter-spacing:-.04em; }
+    .brand-mark { width:32px; height:32px; border-radius:8px; background:var(--orange); position:relative; transform:rotate(-8deg); }
+    .brand-mark::after { content:""; position:absolute; inset:7px; border:2px solid #fff; border-radius:3px; transform:rotate(13deg); }
+    nav { display:flex; align-items:center; gap:38px; font-size:14px; font-weight:700; }
+    nav a { color:var(--ink); text-decoration:none; }
+    nav a.active { color:var(--orange); }
+    .nav-cta { background:var(--ink); color:#fff; padding:13px 19px; border-radius:999px; }
+    .hero { min-height:calc(100vh - 94px); display:grid; grid-template-columns:minmax(0,1.03fr) minmax(0,.97fr); align-items:center; gap:clamp(24px,5vw,80px); padding-top:62px; padding-bottom:75px; }
+    .eyebrow { display:inline-flex; align-items:center; gap:9px; font-weight:900; font-size:12px; letter-spacing:.17em; color:#a04423; text-transform:uppercase; }
+    .eyebrow::before { content:""; width:27px; height:2px; background:var(--orange); }
+    h1 { max-width:720px; font-size:clamp(48px,5.35vw,82px); line-height:1.16; letter-spacing:-.07em; margin:28px 0 22px; font-weight:900; }
+    h1 .prelude { display:block; font-size:.57em; letter-spacing:-.05em; margin-bottom:.16em; }
+    h1 em { display:block; font-style:normal; color:var(--orange); white-space:nowrap; }
+    .lead { color:var(--muted); font-size:18px; line-height:1.8; max-width:510px; margin:0 0 32px; }
+    .metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; max-width:620px; }
+    .metric { border:1px solid #d8d3c5; background:#fffdf7; border-radius:18px; min-height:133px; padding:20px 21px 15px; box-shadow:0 13px 26px rgba(74,60,33,.055); }
+    .metric.primary { background:var(--orange); color:#fff; border-color:var(--orange); transform:rotate(-1.2deg); }
+    .metric small { display:block; font-size:12px; font-weight:800; letter-spacing:.04em; opacity:.8; }
+    .metric strong { display:block; font-size:clamp(27px,2.7vw,42px); line-height:1.2; margin:8px 0 3px; letter-spacing:-.06em; white-space:nowrap; }
+    .metric.efficiency strong { font-size:clamp(25px,2.15vw,34px); }
+    .metric span { font-size:12px; opacity:.75; }
+    .actions { display:flex; align-items:center; gap:24px; margin-top:31px; }
+    .button { display:inline-flex; align-items:center; justify-content:center; gap:15px; border:0; border-radius:999px; background:var(--ink); color:#fff; padding:17px 26px; font-family:inherit; font-size:15px; font-weight:800; text-decoration:none; box-shadow:0 10px 18px rgba(35,35,25,.13); }
+    .button b { font-size:22px; line-height:12px; }
+    .text-link { color:var(--ink); font-size:14px; font-weight:800; text-underline-offset:6px; }
+    .footnote { font-size:11px; line-height:1.6; color:#88877b; margin:22px 0 0; }
+    .visual { position:relative; padding:20px 0 0 22px; }
+    .visual::before { content:""; position:absolute; width:82%; height:82%; right:-7%; top:-5%; border:2px solid #eac1a8; border-radius:48% 52% 40% 60%; transform:rotate(16deg); }
+    .visual::after { content:""; position:absolute; width:54px; height:54px; right:1%; top:0; background:var(--orange); clip-path:polygon(50% 0,61% 37%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%); }
+    .photo-card { position:relative; z-index:1; width:min(100%,520px); margin:auto; background:#fff; padding:13px 13px 15px; border-radius:23px; box-shadow:0 30px 65px rgba(45,39,24,.19); transform:rotate(2deg); }
+    .photo-top { display:flex; justify-content:space-between; align-items:center; padding:4px 6px 11px; font-size:11px; font-weight:900; letter-spacing:.06em; }
+    .tag { background:#f2f0e8; color:#66685c; border-radius:999px; padding:6px 10px; letter-spacing:0; }
+    .compare { position:relative; width:100%; height:min(58vh,530px); min-height:370px; overflow:hidden; border-radius:13px; background:#dedbd3; isolation:isolate; }
+    .compare img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; display:block; }
+    .after { clip-path:inset(0 50% 0 0); }
+    .divider { position:absolute; z-index:3; top:0; bottom:0; left:50%; width:3px; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.15); pointer-events:none; }
+    .handle { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:47px; height:47px; display:grid; place-items:center; border-radius:50%; color:var(--orange); background:#fff; box-shadow:0 4px 15px rgba(0,0,0,.18); font-weight:900; font-size:18px; }
+    .compare input { position:absolute; z-index:5; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:ew-resize; }
+    .image-label { position:absolute; top:16px; z-index:4; background:#fff; color:var(--ink); font-size:12px; font-weight:900; padding:8px 11px; border-radius:999px; pointer-events:none; }
+    .image-label.left { left:15px; } .image-label.right { right:15px; }
+    .photo-bottom { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 8px 0; }
+    .photo-bottom span { color:#66685c; font-size:12px; }
+    .photo-bottom strong { font-size:17px; white-space:nowrap; }
+    .photo-bottom strong b { color:var(--orange); font-size:29px; }
+    .preview-note { border-top:1px solid var(--line); padding:17px 0 24px; font-size:12px; color:#8a887d; }
+    @media(max-width:900px) { header { height:76px; } nav { gap:15px; } nav a:nth-child(3) { display:none; } .hero { grid-template-columns:1fr; padding-top:45px; } .visual { max-width:600px; margin:auto; width:100%; } h1 { max-width:650px; } }
+    @media(max-width:580px) { .brand { font-size:16px; } nav a:first-child, nav a:nth-child(2) { display:none; } .nav-cta { padding:10px 14px; font-size:12px; } h1 { font-size:clamp(38px,9vw,48px); } .lead { font-size:15px; } .metrics { grid-template-columns:1fr; } .metric { min-height:105px; padding:15px 18px; } .metric strong, .metric.efficiency strong { font-size:30px; } .metric span { font-size:11px; } .actions { gap:16px; } .button { padding:15px 20px; } .visual { padding-left:0; } .compare { height:440px; min-height:0; } .photo-bottom strong { font-size:14px; } .photo-bottom strong b { font-size:23px; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span>图像去重处理器</div>
+      <nav aria-label="页面导航">
+        <a class="active" href="#">首页</a>
+        <a href="#demo">开始使用</a>
+        <a href="#demo">开发者介绍</a>
+        <a class="nav-cta" href="#demo">立即体验 ↗</a>
+      </nav>
+    </header>
+    <main class="hero">
+      <section>
+        <div class="eyebrow">给内容电商运营的批量图片处理工具</div>
+        <h1><span class="prelude">把图片交给工具</span><em>把时间留给内容</em></h1>
+        <p class="lead">一次提交，批量处理，拒绝重复</p>
+        <div class="metrics" aria-label="本次处理耗时">
+          <div class="metric primary"><small>满批量 · 本次测试</small><strong>20 张 ≈ 11 分钟</strong><span>平均约 33 秒／张</span></div>
+          <div class="metric efficiency"><small>项目方提供的同批对照数据</small><strong>效率约提升 264%</strong><span>同样处理 20 张，人工约需 40 分钟</span></div>
+        </div>
+        <div class="actions"><a class="button" href="#demo">开始使用 <b>↗</b></a><a class="text-link" href="#compare">看看处理效果 ↓</a></div>
+        <p class="footnote">据项目方提供的同批对照数据：人工处理 20 张约 40 分钟，工具处理同批图片约 11 分钟。按单位时间处理张数计算，效率约提升 264%；实际耗时随图片和运行环境变化。</p>
+      </section>
+      <section class="visual" id="compare" aria-label="图片处理前后对比">
+        <div class="photo-card">
+          <div class="photo-top"><span>02 / 原图与处理结果</span><span class="tag">拖动查看变化 ↔</span></div>
+          <div class="compare" id="slider">
+            <img src="../assets/homepage/B.jpg" alt="粉色袖口原图">
+            <img class="after" src="../assets/homepage/02_B_processed.png" alt="粉色袖口处理结果">
+            <div class="divider"><div class="handle">↔</div></div>
+            <span class="image-label left">处理后</span><span class="image-label right">原图</span>
+            <input type="range" min="0" max="100" value="50" aria-label="拖动查看处理前后对比">
+          </div>
+          <div class="photo-bottom"><span>原图 / 处理后 · 本系统判定：不重复</span><strong>离线相似分 <b>35.78</b> / 100</strong></div>
+        </div>
+      </section>
+    </main>
+    <div class="preview-note" id="demo">首屏视觉草图 · 下一屏将接“2. 效率与测评”。本文件的按钮为排版示意。</div>
+  </div>
+  <script>
+    const slider = document.querySelector(".compare input");
+    const after = document.querySelector(".compare .after");
+    const divider = document.querySelector(".compare .divider");
+    function updateCompare() {
+      const value = Number(slider.value);
+      after.style.clipPath = `inset(0 ${100 - value}% 0 0)`;
+      divider.style.left = value + "%";
+    }
+    slider.addEventListener("input", updateCompare);
+    updateCompare();
+  </script>
+</body>
+</html>

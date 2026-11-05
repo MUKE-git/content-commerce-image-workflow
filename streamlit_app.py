@@ -10,6 +10,7 @@ import streamlit as st
 from PIL import Image, ImageOps
 
 from image_workflow import BatchResult, ImageInput, process_batch
+from homepage_deck import render_home
 
 
 MAX_IMAGES = 20
@@ -206,12 +207,13 @@ def _render_result() -> None:
 
 def _use_page() -> None:
     _init_state()
-    st.markdown(
-        '<div class="use-hero"><div class="eyebrow">图片处理工作台</div>'
-        '<h1> 你的图片准备好了吗？</h1>'
-        '<p>选好图片，检查无误后开始处理。</p></div>',
-        unsafe_allow_html=True,
-    )
+    if st.session_state.phase == "select":
+        st.markdown(
+            '<div class="use-hero"><div class="eyebrow">图片处理工作台</div>'
+            '<h1> 你的图片准备好了吗？</h1>'
+            '<p>选好图片，检查无误后开始处理。</p></div>',
+            unsafe_allow_html=True,
+        )
     with st.container():
         if st.session_state.phase == "select":
             _render_selection()
@@ -233,8 +235,8 @@ STYLE = """
 <style>
 :root { --orange:#ed7133; --orange-deep:#d95e22; --ink:#282620; --muted:#77736e; --line:#eee8e2; }
 [data-testid="stApp"] { background:#fff; color:var(--ink); }
-[data-testid="stHeader"] { background:transparent; }
-[data-testid="stMainBlockContainer"] { max-width:1020px; padding-top:2rem; padding-bottom:5rem; }
+[data-testid="stHeader"] { background:transparent; pointer-events:none; }
+[data-testid="stMainBlockContainer"] {max-width:100%; padding-left:2rem;padding-right:2rem;padding-top:1.5rem;padding-bottom:1rem;}
 div[data-testid="stToolbar"], #MainMenu, footer { visibility:hidden; }
 .site-brand { font-size:26px; font-weight:750; letter-spacing:-.04em; line-height:1.4; }
 .site-brand span { color:var(--orange); font-size:27px; vertical-align:-2px; }
@@ -243,13 +245,13 @@ div[data-testid="stToolbar"], #MainMenu, footer { visibility:hidden; }
 .st-key-top_nav [data-testid="stColumn"] { display:flex; align-items:center; }
 .st-key-top_nav [data-testid="stColumn"]:last-child { justify-content:flex-end; }
 .st-key-top_nav [data-testid="stColumn"] > div { width:100%; }
-.st-key-top_nav [data-testid="stPageLink"] a { color:#6d6862; font-size:30px; font-weight:600; line-height:2;position:relative; top:8px; }
+.st-key-top_nav [data-testid="stPageLink"] a { color:#6d6862; font-size:30px; font-weight:600; line-height:1.4;position:relative; top:3px; }
 .st-key-top_nav [data-testid="stPageLink"] a p {
     font-size:19px !important;}
 [data-testid="stPageLink"] a:hover { color:var(--orange); }
 .use-hero { text-align:center; padding:52px 0 25px; }
-.eyebrow { color:var(--orange-deep); font-size:30px; font-weight:900; letter-spacing:.15em; }
-.use-hero h1,.home-placeholder h1 { font-size:clamp(35px,5vw,54px); line-height:0.5; letter-spacing:-.05em; margin:7px 0 7px; color:var(--ink); }
+.eyebrow { color:var(--orange-deep); font-size:30px; font-weight:1000;line-height:2； letter-spacing:.15em; }
+.use-hero h1,.home-placeholder h1 { font-size:clamp(35px,5vw,54px); line-height:0.5; letter-spacing:-.05em; margin:15px 0 15px; color:var(--ink); }
 .use-hero h1 { position:relative; left:19px; }
 .use-hero p,.home-placeholder p { color:var(--muted); font-size:19px; }
 .upload-anchor + div [data-testid="stFileUploaderDropzone"] { min-height:168px; border:2px dashed #e7ac82; border-radius:16px; background:#f5f3f0; padding:25px; }
@@ -290,7 +292,7 @@ div.stButton > button[kind="secondary"], div.stDownloadButton > button[kind="sec
 .result-failed { font-size:65px; }
 .home-placeholder { text-align:center; padding:100px 20px; }
 @media (prefers-reduced-motion:reduce) { .image-card,.orbit { animation:none !important; } }
-@media (max-width:700px) { [data-testid="stMainBlockContainer"] { padding:1.5rem 1.2rem 4rem; } .st-key-top_nav [data-testid="stHorizontalBlock"] { flex-direction:row !important; flex-wrap:wrap !important; gap:8px 16px; } .st-key-top_nav [data-testid="stColumn"] { flex:0 0 auto !important; width:auto !important; min-width:0 !important; } .st-key-top_nav [data-testid="stColumn"]:first-child { flex:1 1 100% !important; } .st-key-top_nav [data-testid="stColumn"]:last-child { margin-left:auto; } .site-brand { font-size:22px; } .site-brand span { font-size:23px; } .dev-placeholder { font-size:21px; } .use-hero { padding-top:35px; } .use-hero h1 { font-size:35px; } [data-testid="stFileUploaderDropzone"] { min-height:165px; } }
+@media (max-width:700px) { [data-testid="stMainBlockContainer"] { padding:1.5rem 1.2rem 4rem; } .st-key-top_nav [data-testid="stHorizontalBlock"] { flex-direction:row !important; flex-wrap:wrap !important; gap:8px 12px; } .st-key-top_nav [data-testid="stColumn"] { flex:0 0 auto !important; width:auto !important; min-width:0 !important; } .st-key-top_nav [data-testid="stColumn"]:first-child { flex:1 1 100% !important; } .st-key-top_nav [data-testid="stColumn"]:last-child { margin-left:0; } .st-key-top_nav [data-testid="stPageLink"] a { top:0; line-height:1.4; } .st-key-top_nav [data-testid="stPageLink"] a p { font-size:15px !important; } .site-brand { font-size:22px; } .site-brand span { font-size:23px; } .dev-placeholder { font-size:13px; } .use-hero { padding-top:35px; } .use-hero h1 { font-size:35px; } [data-testid="stFileUploaderDropzone"] { min-height:165px; } }
 </style>
 """
 
@@ -298,8 +300,8 @@ div.stButton > button[kind="secondary"], div.stDownloadButton > button[kind="sec
 def main() -> None:
     st.set_page_config(page_title="图像去重处理器", page_icon="🟠", layout="wide", initial_sidebar_state="collapsed")
     st.markdown(STYLE, unsafe_allow_html=True)
-    use = st.Page(_use_page, title="开始使用", url_path="use", default=True)
-    home = st.Page(_home_placeholder, title="首页", url_path="home")
+    use = st.Page(_use_page, title="开始使用", url_path="use")
+    home = st.Page(lambda: render_home(use), title="首页", url_path="home", default=True)
     current = st.navigation([use, home], position="hidden")
     with st.container(key="top_nav"):
         brand, home_link, use_link, developer = st.columns([2.6, 0.7, 1.1, 2.5], vertical_alignment="center")
