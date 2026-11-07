@@ -16,7 +16,7 @@ ASSETS = Path(__file__).parent / "assets" / "homepage"
 CASES = (
     {"id": "01", "name": "灰色外套", "kind": "上身展示图", "original": "K0.jpg", "result": "01_K_processed.png", "score": "3.70", "ssim": "0.432022", "psnr": "12.3883 dB", "mse": "3751.8657", "mad": "42.2439"},
     {"id": "02", "name": "粉色袖口", "kind": "局部展示图（有文字）", "original": "B.jpg", "result": "02_B_processed.png", "score": "35.78", "ssim": "0.696924", "psnr": "19.3066 dB", "mse": "762.8218", "mad": "11.4385"},
-    {"id": "03", "name": "米色上衣", "kind": "上身展示图（背景含义无关文字）", "original": "D.png", "result": "03_D_processed.png", "score": "12.95", "ssim": "0.536451", "psnr": "14.5751 dB", "mse": "2267.6090", "mad": "24.0449"},
+    {"id": "03", "name": "米色上衣", "kind": "上身展示图（含干扰文字）", "original": "D.png", "result": "03_D_processed.png", "score": "12.95", "ssim": "0.536451", "psnr": "14.5751 dB", "mse": "2267.6090", "mad": "24.0449"},
 )
 
 STAGES = (

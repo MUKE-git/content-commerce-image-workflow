@@ -80,11 +80,71 @@ html,body{width:100%;height:100%;overflow:hidden}body{background:#fff}
 '''
 
 
+# Each panel can be switched independently: v1 is the prior layout, v2 is the compact layout.
+PAGE_STYLE_VERSIONS = {2: "v2", 3: "v2", 4: "v2"}
+
+PAGE_STYLE_VARIANTS = {
+    2: {
+        "v1": '''@media(min-width:1001px){
+            .slide:nth-child(2) .page{padding-top:30px}
+            .slide:nth-child(2) .efficiency-band{padding:19px 20px;margin:22px 0 16px}
+            .slide:nth-child(2) .metric-explainer{font-size:clamp(15px,1.1vw,18px);border-spacing:0 9px}
+            .slide:nth-child(2) .metric-explainer th,.slide:nth-child(2) .metric-explainer td{padding-top:12px;padding-bottom:12px}
+            .slide:nth-child(2) .p2-notes{margin-top:26px}
+        }''',
+        "v2": '''@media(min-width:1001px){
+            .slide:nth-child(2) .page{padding-top:24px}
+            .slide:nth-child(2) .efficiency-band{padding:12px 18px;margin:13px 0 12px}
+            .slide:nth-child(2) .efficiency-band .figures{line-height:1.15}
+            .slide:nth-child(2) h2{line-height:1.12;margin:10px 0 6px}
+            .slide:nth-child(2) .effect-copy{line-height:1.38;margin:2px 0 5px}
+            .slide:nth-child(2) .metric-explainer{font-size:clamp(15px,1.1vw,18px);border-spacing:0 5px}
+            .slide:nth-child(2) .metric-explainer th,.slide:nth-child(2) .metric-explainer td{padding:7px 14px}
+            .slide:nth-child(2) .metric-explainer thead th,.slide:nth-child(2) .metric-explainer thead td{padding-top:0;padding-bottom:2px}
+            .slide:nth-child(2) .p2-notes{margin-top:12px}
+        }''',
+    },
+    3: {
+        "v1": '''@media(min-width:1001px){
+            .slide:nth-child(3) .stage{padding:6px 17px;min-height:72px}
+            .slide:nth-child(3) .stages{gap:clamp(12px,1.5vh,18px)}
+            .slide:nth-child(3) .stage .name{font-size:21px}
+            .slide:nth-child(3) .stage b{font-size:18px}
+            .slide:nth-child(3) .stage p,.slide:nth-child(3) .stage small{font-size:17px}
+        }''',
+        "v2": '''@media(min-width:1001px){
+            .slide:nth-child(3) h2{line-height:1.13;margin:9px 0 5px}
+            .slide:nth-child(3) .intro{line-height:1.35;margin-bottom:11px}
+            .slide:nth-child(3) .stages{gap:clamp(9px,1.2vh,14px);margin:11px 0}
+            .slide:nth-child(3) .stage{padding:6px 17px;min-height:62px}
+            .slide:nth-child(3) .stage .name{font-size:21px;line-height:1.2}
+            .slide:nth-child(3) .stage b{font-size:18px;line-height:1.2}
+            .slide:nth-child(3) .stage p{font-size:17px;line-height:1.25;margin:2px 0 0}
+            .slide:nth-child(3) .stage small{font-size:17px;line-height:1.2}
+        }''',
+    },
+    4: {
+        "v1": '''@media(min-width:1001px){
+            .slide:nth-child(4) .case-teaser>div{min-height:190px;display:flex;flex-direction:column;justify-content:space-between}
+        }''',
+        "v2": '''@media(min-width:1001px){
+            .slide:nth-child(4) h2{line-height:1.13;margin:9px 0 6px}
+            .slide:nth-child(4) .intro{line-height:1.35;margin-bottom:12px}
+            .slide:nth-child(4) .case-teaser>div{padding:11px 13px 12px;min-height:0;display:block}
+            .slide:nth-child(4) .case-teaser small{line-height:1.2}
+            .slide:nth-child(4) .case-teaser h3{line-height:1.2;margin:4px 0}
+            .slide:nth-child(4) .case-teaser strong{display:block;line-height:1.1;margin:3px 0}
+            .slide:nth-child(4) .case-teaser p{line-height:1.3;margin:3px 0 0}
+        }''',
+    },
+}
+
+
 SCRIPT = r'''
 const slides=[...document.querySelectorAll('.slide')];let page=0,lastGesture=0;
 function closeCases(){document.querySelectorAll('.case.open').forEach(x=>x.classList.remove('open'))}
 function openCase(card){closeCases();card.classList.add('open')}
-function fitPage(){const scroll=slides[page].querySelector('.scroll');if(!scroll)return;const content=scroll.firstElementChild;let low=.1,high=1,best=.1;for(let attempt=0;attempt<9;attempt++){const scale=(low+high)/2;content.style.zoom=String(scale);if(scroll.scrollHeight<=scroll.clientHeight+1&&scroll.scrollWidth<=scroll.clientWidth+1){best=scale;low=scale}else high=scale}content.style.zoom=String(best)}
+function fitPage(){const scroll=slides[page].querySelector('.scroll');if(!scroll)return;const content=scroll.firstElementChild;let low=.1,high=page>=1&&page<=3?.92:1,best=.1;for(let attempt=0;attempt<9;attempt++){const scale=(low+high)/2;content.style.zoom=String(scale);if(scroll.scrollHeight<=scroll.clientHeight+1&&scroll.scrollWidth<=scroll.clientWidth+1){best=scale;low=scale}else high=scale}content.style.zoom=String(best)}
 function show(i){if(i<0||i>=slides.length||i===page)return;slides[page].classList.remove('active');page=i;slides[page].classList.add('active');fitPage();document.querySelector('.count').textContent=String(page+1).padStart(2,'0')+' / 05';document.querySelector('.prev').disabled=page===0;document.querySelector('.next').disabled=page===4;closeCases();lastPointer=null}
 function turn(d){let now=Date.now();if(now-lastGesture<900)return;lastGesture=now;show(page+d)}
 document.querySelector('.prev').onclick=()=>show(page-1);document.querySelector('.next').onclick=()=>show(page+1);document.querySelector('.prev').disabled=true;
@@ -105,6 +165,10 @@ window.addEventListener('resize',()=>requestAnimationFrame(fitPage));window.addE
 def _document() -> str:
     sketch = SKETCH.read_text(encoding="utf-8")
     sketch_css = re.search(r"<style>(.*?)</style>", sketch, re.S).group(1)
+    page_styles = "\n".join(
+        PAGE_STYLE_VARIANTS[number][PAGE_STYLE_VERSIONS[number]]
+        for number in (2, 3, 4)
+    )
     hero = re.search(r'<main class="hero">(.*?)</main>', sketch, re.S).group(1)
     hero = hero.replace('<img src="../assets/homepage/B.jpg" alt="粉色袖口原图">', '<img src="../assets/homepage/02_B_processed.png" alt="粉色袖口处理结果">')
     hero = hero.replace('<img class="after" src="../assets/homepage/02_B_processed.png" alt="粉色袖口处理结果">', '<img class="after" src="../assets/homepage/B.jpg" alt="粉色袖口原图">')
@@ -118,7 +182,7 @@ def _document() -> str:
         for n, label, title, body, tech in STAGES
     )
     cases = ''.join(_case(case) for case in CASES)
-    return f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>{sketch_css}\n{EXTRA_CSS}</style></head><body><div class="deck">
+    return f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>{sketch_css}\n{EXTRA_CSS}\n{page_styles}</style></head><body><div class="deck">
     <section class="slide active" aria-label="首屏"><div class="scroll"><div class="shell"><main class="hero">{hero}</main></div></div></section>
     <section class="slide" aria-label="效率与测评"><div class="scroll"><div class="page"><div class="kicker">02 / 效率与测评</div><div class="efficiency-band"><div class="figures"><span>20 张约 11 分钟</span><span class="divider-text">｜</span><span>处理效率约提升 264%</span></div><p>据项目方提供的同批 20 张图片对照数据，人工处理约 40 分钟，工具处理约 11 分钟。实际耗时随图片和运行环境变化。</p></div><h2>像素级去重，保留原图效果</h2><p class="effect-copy">保留商品主体、文字和画面质感，肉眼效果一致，处理后的图片可直接用于内容发布。<br><strong>BUT，像素层面大不同！</strong>模拟社媒查重机制，以原图为参照，从 SSIM、PSNR、MSE、MAD 四项指标衡量相似度，处理前后图片综合相似分平均为 32.71／100。</p><table class="metric-explainer"><thead><tr><th>指标</th><td>简明解释</td></tr></thead><tbody><tr><th scope="row">SSIM</th><td>比较画面结构；越高，结构越相似。</td></tr><tr><th scope="row">PSNR</th><td>衡量像素变化带来的图像差异；通常越高，图片越接近。</td></tr><tr><th scope="row">MSE</th><td>统计像素差异的平方平均值；越高，差异越大。</td></tr><tr><th scope="row">MAD</th><td>统计像素差异的平均幅度；越高，差异越大。</td></tr></tbody></table><div class="notes p2-notes"><p class="note">据项目方提供的同批对照数据，同一组 20 张图片，人工处理约 40 分钟，工具处理约 11 分钟。按单位时间处理张数计算，效率约提升 264%［(40 ÷ 11 − 1) × 100%］；实际耗时随图片和运行环境变化。</p><p class="note">指定图片的离线测试模拟内容平台的相似性检查，不代表小红书或其他平台的官方判定、审核或推荐结果。</p><p class="note">选取 89 组商品图片，将每组原图与本工具处理后的结果图进行离线两图测试，综合相似分平均为 32.71／100；分数越低，表示两图差异越大。</p></div></div></div></section>
     <section class="slide" aria-label="七阶段"><div class="scroll"><div class="page"><div class="kicker">03 / 处理流程</div><h2>上传一次，七步完成图片处理</h2><p class="intro">从画面结构到最终导出，七个步骤在同一次任务里完成。</p><div class="stages">{stages}</div><p class="sources">技术与素材来源：<a href="https://pillow.readthedocs.io/en/stable/" target="_blank" rel="noopener">Pillow</a> · <a href="https://rapidai.github.io/RapidOCRDocs/" target="_blank" rel="noopener">RapidOCR</a> · <a href="https://commons.wikimedia.org/wiki/Commons:API" target="_blank" rel="noopener">Wikimedia Commons</a> · <a href="https://www.pexels.com/license/" target="_blank" rel="noopener">Pexels 照片</a></p></div></div></section>
@@ -132,6 +196,7 @@ def render_home(_use_page: st.Page) -> None:
     st.markdown('''<style>
     [data-testid="stMain"]:has(.st-key-home_deck){overflow:hidden!important}
     [data-testid="stMainBlockContainer"]:has(.st-key-home_deck){padding-bottom:0!important;padding-top:1.5rem!important}
+    @media(min-width:901px){[data-testid="stMainBlockContainer"]:has(.st-key-home_deck){padding-top:1.2rem!important}.site-brand{font-size:21px}.site-brand span{font-size:22px}.dev-placeholder{font-size:14px}.st-key-top_nav [data-testid="stPageLink"] a p{font-size:16px!important}}
     [data-testid="stMainBlockContainer"]:has(.st-key-home_deck) [data-testid="stDivider"]{margin:0!important}
     .st-key-home_deck{margin:-3rem -2rem 0!important}
     .st-key-home_deck iframe[data-testid="stIFrame"],.st-key-home_deck [data-testid="stElementContainer"]:has(iframe[data-testid="stIFrame"]){height:calc(100dvh - 143px)!important;max-height:calc(100dvh - 143px)!important;min-height:0!important;width:100%;border:0}
