@@ -292,7 +292,23 @@ div.stButton > button[kind="secondary"], div.stDownloadButton > button[kind="sec
 .result-failed { font-size:65px; }
 .home-placeholder { text-align:center; padding:100px 20px; }
 @media (prefers-reduced-motion:reduce) { .image-card,.orbit { animation:none !important; } }
-@media (max-width:700px) { [data-testid="stMainBlockContainer"] { padding:1.5rem 1.2rem 4rem; } .st-key-top_nav [data-testid="stHorizontalBlock"] { flex-direction:row !important; flex-wrap:wrap !important; gap:8px 12px; } .st-key-top_nav [data-testid="stColumn"] { flex:0 0 auto !important; width:auto !important; min-width:0 !important; } .st-key-top_nav [data-testid="stColumn"]:first-child { flex:1 1 100% !important; } .st-key-top_nav [data-testid="stColumn"]:last-child { margin-left:0; } .st-key-top_nav [data-testid="stPageLink"] a { top:0; line-height:1.4; } .st-key-top_nav [data-testid="stPageLink"] a p { font-size:15px !important; } .site-brand { font-size:22px; } .site-brand span { font-size:23px; } .dev-placeholder { font-size:13px; } .use-hero { padding-top:35px; } .use-hero h1 { font-size:35px; } [data-testid="stFileUploaderDropzone"] { min-height:165px; } }
+@media (max-width:700px) {
+  [data-testid="stMainBlockContainer"] { padding:0.5rem 1.2rem 4rem; }
+  [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] { gap:8px; }
+  [data-testid="stMainBlockContainer"] hr { margin:4px 0 !important; }
+  .st-key-top_nav [data-testid="stHorizontalBlock"] { display:grid !important; grid-template-columns:auto auto minmax(0,1fr); align-items:center !important; column-gap:16px !important; row-gap:5px !important; }
+  .st-key-top_nav [data-testid="stColumn"] { width:auto !important; min-width:0 !important; display:block; }
+  .st-key-top_nav [data-testid="stColumn"]:first-child { grid-column:1 / -1; min-height:36px !important; }
+  .st-key-top_nav [data-testid="stColumn"]:last-child { justify-self:end; min-height:20px !important; }
+  .st-key-top_nav [data-testid="stPageLink"] a { top:0; font-size:15px !important; line-height:1.3; }
+  .st-key-top_nav [data-testid="stPageLink"] a p { font-size:15px !important; }
+  .site-brand { font-size:22px; white-space:nowrap; }
+  .site-brand span { font-size:23px; }
+  .dev-placeholder { font-size:11px; line-height:1.3; white-space:normal; }
+  .use-hero { padding-top:12px; }
+  .use-hero h1 { font-size:35px; }
+  [data-testid="stFileUploaderDropzone"] { min-height:165px; }
+}
 </style>
 """
 

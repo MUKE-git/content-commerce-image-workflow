@@ -200,7 +200,7 @@ def render_home(_use_page: st.Page) -> None:
     [data-testid="stMainBlockContainer"]:has(.st-key-home_deck) [data-testid="stDivider"]{margin:0!important}
     .st-key-home_deck{margin:-3rem -2rem 0!important}
     .st-key-home_deck iframe[data-testid="stIFrame"],.st-key-home_deck [data-testid="stElementContainer"]:has(iframe[data-testid="stIFrame"]){height:calc(100dvh - 143px)!important;max-height:calc(100dvh - 143px)!important;min-height:0!important;width:100%;border:0}
-    @media(max-width:700px){.st-key-home_deck{margin:0 -1.2rem!important}}
+    @media(max-width:700px){[data-testid="stMainBlockContainer"]:has(.st-key-home_deck){padding-top:.5rem!important}.st-key-home_deck{margin:0!important;width:100%!important}.st-key-home_deck iframe[data-testid="stIFrame"]{display:block;width:100%!important}}
     </style>''', unsafe_allow_html=True)
     st.html('''<script>
     function fitHomeFrame() {
